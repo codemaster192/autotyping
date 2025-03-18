@@ -23,8 +23,17 @@ class TypingSimulator:
 
         self.keyboard_controller = Controller()  # pynput keyboard controller
 
-        # Keyboard layout dictionary (simplified for demonstration)
-        self.nearby_keys = {
+    def random_typing_speed(self):
+        # Random typing speed: simulate a range of speeds
+        return random.uniform(0.05, 0.1)  # typing delay between 50ms to 100ms
+
+    def random_typing_error(self):
+        # Random typing error: simulate a mistake with a probability (e.g., 5%)
+        return random.random() < 0.05  # 5% chance for a typing error
+
+    def get_adjacent_key(self, char):
+        # Get a random adjacent key from the layout
+        nearby_keys = {
             'a': ['q', 'w', 's', 'z'],
             'b': ['v', 'g', 'h', 'n'],
             'c': ['x', 'v', 'f', 'd'],
@@ -62,20 +71,60 @@ class TypingSimulator:
             '8': ['7', '9', 'i'],
             '9': ['8', '0', 'o'],
         }
-
-    def random_typing_speed(self):
-        # Random typing speed: simulate a range of speeds
-        return random.uniform(0.01, 0.05)  # typing delay between 50ms to 100ms
-
-    def random_typing_error(self):
-        # Random typing error: simulate a mistake with a probability (e.g., 5%)
-        return random.random() < 0.05  # 5% chance for a typing error
-
-    def get_adjacent_key(self, char):
-        # Get a random adjacent key from the layout
-        if char in self.nearby_keys:
-            return random.choice(self.nearby_keys[char])
+        if char in nearby_keys:
+            return random.choice(nearby_keys[char])
         return char  # If no adjacent keys, return the original char
+
+    def type_special_character(self, char):
+        # Handle individual special characters
+        special_characters = {
+            '@': [Key.shift, '2'],      # '@' requires Shift + 2
+            '#': [Key.shift, '3'],      # '#' requires Shift + 3
+            '$': [Key.shift, '4'],      # '$' requires Shift + 4
+            '%': [Key.shift, '5'],      # '%' requires Shift + 5
+            '^': [Key.shift, '6'],      # '^' requires Shift + 6
+            '&': [Key.shift, '7'],      # '&' requires Shift + 7
+            '*': [Key.shift, '8'],      # '*' requires Shift + 8
+            '(': [Key.shift, '9'],      # '(' requires Shift + 9
+            ')': [Key.shift, '0'],      # ')' requires Shift + 0
+            '_': [Key.shift, '-'],      # '_' requires Shift + '-'
+            '+': [Key.shift, '='],      # '+' requires Shift + '='
+            '=': ['='],                 # '=' on standard QWERTY
+            '{': [Key.shift, '['],      # '{' requires Shift + '['
+            '}': [Key.shift, ']'],      # '}' requires Shift + ']'
+            '[': ['['],                 # '['
+            ']': [']'],                 # ']'
+            ':': [Key.shift, ';'],      # ':' requires Shift + ';'
+            ';': [';'],                 # ';'
+            '"': [Key.shift, "'"],      # '"' requires Shift + "'"
+            "'": ["'"],                 # "'"
+            '<': [Key.shift, ','],      # '<' requires Shift + ','
+            '>': [Key.shift, '.'],      # '>' requires Shift + '.'
+            '.': ['.'],                 # '.'
+            '?': [Key.shift, '/'],      # '?' requires Shift + '/'
+            '/': ['/'],                 # '/'
+            '\\': ['\\'],               # '\\'
+            '|': [Key.shift, '\\']      # '|' requires Shift + '\\'
+        }
+
+        # Retrieve the key combination for the special character
+        keys = special_characters.get(char)
+        if keys:
+            # Press each key in the combination
+            for key in keys:
+                if isinstance(key, Key):  # Handle special keys like Shift
+                    self.keyboard_controller.press(key)
+                else:
+                    self.keyboard_controller.press(key)  # Press the character key
+
+            # Release each key in the combination
+            for key in keys:
+                if isinstance(key, Key):  # Handle special keys like Shift
+                    self.keyboard_controller.release(key)
+                else:
+                    self.keyboard_controller.release(key)  # Release the character key
+
+            time.sleep(0.5)  # Add delay between key presses
 
     def type_text(self, text):
         start_time = time.time()  # Record the start time of the typing simulation
@@ -95,11 +144,22 @@ class TypingSimulator:
                 self.keyboard_controller.press(Key.backspace)  # Corrected backspace key
                 self.keyboard_controller.release(Key.backspace)
                 time.sleep(self.random_typing_speed())
-            
-            # Type the correct character
-            self.keyboard_controller.press(char)  # Press the key
-            self.keyboard_controller.release(char)  # Release the key
-            time.sleep(self.random_typing_speed())  # Wait for a short random period between keystrokes
+
+            # Handle special characters
+            if char in "!@#$%^&*()_+{}[]|:;<>,.?/~":
+                self.type_special_character(char)
+            else:
+                # Handle uppercase characters
+                if char.isupper():
+                    self.keyboard_controller.press(Key.shift)  # Hold Shift for uppercase
+                    self.keyboard_controller.press(char.lower())  # Type lowercase character but with Shift for uppercase
+                    self.keyboard_controller.release(char.lower())
+                    self.keyboard_controller.release(Key.shift)
+                else:
+                    # Type the correct character
+                    self.keyboard_controller.press(char)  # Press the key
+                    self.keyboard_controller.release(char)  # Release the key
+                time.sleep(self.random_typing_speed())  # Wait for a short random period between keystrokes
 
             if char == " ":
                 time.sleep(random.uniform(0.1, 0.3))  # Short pause after each word
@@ -110,7 +170,7 @@ class TypingSimulator:
             if char == "\n":  # For line breaks, simulate pressing the Enter key
                 self.keyboard_controller.press(Key.enter)  # Corrected Enter key handling
                 self.keyboard_controller.release(Key.enter)
-                time.sleep(self.random_typing_speed())
+                time.sleep(self.random_typing_speed())  # Ensure only one line break is inserted
 
         end_time = time.time()  # Record the end time of the typing simulation
         total_time = round(end_time - start_time, 2)  # Calculate the total typing time
